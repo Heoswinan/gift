@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: canguan-travel-guide
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: canguan-travel-guide-db
+          property: connectionString
+
+databases:
+  - name: canguan-travel-guide-db
+    databaseName: canguan_guide
+    user: canguan_guide
+    plan: free
+    region: oregon
