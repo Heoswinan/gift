@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F3EEE3">
+  <title>登录 · 罐罐旅游指南</title>
+  <link rel="icon" href="./icon-192.png">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #F3EEE3;
+      --ink: #26211A;
+      --muted: #8C8170;
+      --line: #DFD5C0;
+      --card: #FFFDF8;
+      --food: #9c1b31;
+      --shadow: 0 18px 54px rgba(64, 48, 22, .14);
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+      padding: max(24px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom));
+      display: grid;
+      place-items: center;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 18% 12%, rgba(226, 87, 43, .09), transparent 36%),
+        var(--paper);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .card {
+      width: min(100%, 420px);
+      padding: clamp(28px, 8vw, 44px);
+      border: 1px solid rgba(223, 213, 192, .8);
+      border-radius: 24px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .logo {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 22px;
+      border-radius: 16px;
+      color: white;
+      background: var(--food);
+      font-size: 28px;
+      font-weight: 800;
+    }
+    h1 { margin: 0; font-size: 25px; letter-spacing: .02em; }
+    .subtitle { margin: 9px 0 28px; color: var(--muted); font-size: 14px; }
+    label { display: block; margin-bottom: 9px; font-size: 13px; font-weight: 700; }
+    input {
+      width: 100%;
+      min-height: 50px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      background: white;
+      font: inherit;
+      font-size: 16px;
+    }
+    input:focus { outline: 2px solid var(--food); outline-offset: 2px; }
+    .hint { margin: 9px 0 21px; color: var(--muted); font-size: 12px; }
+    button {
+      width: 100%;
+      min-height: 50px;
+      border: 0;
+      border-radius: 12px;
+      color: white;
+      background: var(--food);
+      font: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover { background: #801629; }
+    button:focus-visible { outline: 3px solid rgba(156, 27, 49, .28); outline-offset: 3px; }
+    .error { min-height: 20px; margin-top: 12px; color: #b42318; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo" aria-hidden="true">罐</div>
+    <h1>欢迎来到罐罐旅游指南</h1>
+    <p class="subtitle">输入昵称，即可探索全国美食与景点</p>
+    <form id="loginForm">
+      <label for="nickname">你的昵称</label>
+      <input id="nickname" name="nickname" type="text" maxlength="24" minlength="1"
+        placeholder="请输入昵称" autocomplete="nickname" required autofocus>
+      <p class="hint">无需注册或审核。昵称会显示在你发布的点评中，也可以选择匿名点评。</p>
+      <button type="submit">登录</button>
+      <p class="error" id="loginError" role="alert" aria-live="polite"></p>
+    </form>
+  </main>
+  <script>
+    "use strict";
+    const nicknameInput = document.getElementById("nickname");
+    const loginError = document.getElementById("loginError");
+    try {
+      nicknameInput.value = localStorage.getItem("canguan-user-nickname") || "";
+    } catch (error) {
+      console.warn("Saved nickname could not be read", error);
+    }
+    document.getElementById("loginForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const nickname = nicknameInput.value.trim();
+      if (!nickname) {
+        loginError.textContent = "请输入昵称后登录";
+        nicknameInput.focus();
+        return;
+      }
+      if (nickname.length > 24) {
+        loginError.textContent = "昵称最多 24 个字符";
+        nicknameInput.focus();
+        return;
+      }
+      try {
+        localStorage.setItem("canguan-user-nickname", nickname);
+      } catch (error) {
+        console.error("Nickname could not be saved", error);
+        loginError.textContent = "无法保存昵称，请检查浏览器的本地存储设置后重试";
+        return;
+      }
+      location.assign("./guide.html");
+    });
+  </script>
+</body>
+</html>

@@ -2,10 +2,18 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F3EEE3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="罐罐旅游指南">
+<meta name="format-detection" content="telephone=no">
 <title>罐罐旅游指南 · 全国美食与景点地图</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='14' width='52' height='40' rx='10' fill='%23E2572B'/%3E%3Cpath d='M20 34c6-8 18-8 24 0-6 8-18 8-24 0z' fill='%23FFFDF8'/%3E%3Crect x='16' y='24' width='32' height='6' rx='3' fill='%23FFFDF8'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./vendor/leaflet.css">
 <style>
   :root{
     --paper:#F3EEE3;
@@ -38,6 +46,8 @@
   /* ===== 顶部栏 ===== */
   #topbar{
     height:56px;display:flex;align-items:center;gap:10px;padding:0 16px;
+    padding-top:env(safe-area-inset-top);
+    height:calc(56px + env(safe-area-inset-top));
     background:var(--card);border-bottom:1px solid var(--line);position:relative;z-index:1200;
   }
   .brand{display:flex;align-items:center;gap:10px;min-width:0}
@@ -66,11 +76,14 @@
   }
   .btn-ghost:hover{border-color:var(--food);color:var(--food)}
   .btn-ghost .plus{font-weight:800;margin-right:4px}
-  #serviceStatus{font-size:11px;color:var(--muted);max-width:190px;text-align:right}
+  #serviceStatus{font-size:11px;color:var(--muted);max-width:190px;text-align:right;display:flex;align-items:center;gap:5px;justify-content:flex-end}
+  #serviceStatus::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:0 0 auto}
   #serviceStatus.connected{color:#27734e}
+  #serviceStatus.connected::before{background:#2f9e63;box-shadow:0 0 0 3px rgba(47,158,99,.16)}
+  #serviceStatus .txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
   /* ===== 主布局 ===== */
-  #app{display:flex;flex-direction:column;height:calc(100% - 56px)}
+  #app{display:flex;flex-direction:column;height:calc(100% - 56px - env(safe-area-inset-top))}
   #listPanel{
     height:45vh;background:var(--card);border-bottom:1px solid var(--line);
     display:flex;flex-direction:column;min-height:0;
@@ -162,7 +175,7 @@
     font-size:16px;color:var(--ink-2);display:flex;align-items:center;justify-content:center;flex:0 0 auto;
   }
   .sheet-close:hover{background:#ddd2ba}
-  .sheet-body{padding:18px}
+  .sheet-body{padding:18px;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
 
   /* ===== 详情 ===== */
   .det-top{display:flex;gap:14px;align-items:flex-start}
@@ -214,7 +227,20 @@
     color:var(--ink-2);font-weight:600;transition:.15s;
   }
   .rv-useful.on{background:var(--star);border-color:var(--star);color:#fff}
-  .rv-reply{margin-left:auto;font-size:11px;color:var(--scene-deep);background:var(--scene-soft);border-radius:7px;padding:3px 9px}
+  .rv-reply{margin-left:auto;border:0;font-size:11px;color:var(--scene-deep);background:var(--scene-soft);border-radius:7px;padding:5px 10px;font-weight:700}
+  .rv-reply:hover{filter:brightness(.96)}
+  .rv-replies{margin:10px 0 0 8px;padding-left:12px;border-left:2px solid var(--line)}
+  .rv-reply-item{padding:7px 0}
+  .rv-reply-item+.rv-reply-item{border-top:1px solid var(--line)}
+  .rv-reply-top{display:flex;align-items:center;gap:8px;font-size:12px}
+  .rv-reply-author{font-weight:700;color:var(--ink-2)}
+  .rv-reply-time{margin-left:auto;color:var(--muted);font-size:10px}
+  .rv-reply-content{margin-top:3px;font-size:12.5px;color:var(--ink-2);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+  .rv-reply-form{margin:10px 0 0 8px;padding:10px;background:var(--paper);border-radius:10px}
+  .rv-reply-form textarea{min-height:68px;background:var(--card)}
+  .rv-reply-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:7px}
+  .rv-reply-actions button{border:1px solid var(--line);border-radius:8px;padding:6px 12px;background:var(--card);color:var(--ink-2);font-size:12px;font-weight:600}
+  .rv-reply-actions button.submit{border-color:var(--food);background:var(--food);color:#fff}
   .rv-old{margin-top:12px;text-align:center;font-size:12px;color:var(--muted)}
   .rv-old button{border:0;background:none;color:var(--scene);font-weight:700;font-size:12px;text-decoration:underline}
 
@@ -293,7 +319,8 @@
     .seg button{padding:4px 7px;font-size:11px}
     .seg button .cnt{font-size:9px;margin-left:1px}
     .btn-ghost{padding:6px 8px;font-size:11px}
-    #serviceStatus{max-width:74px;font-size:9px;line-height:1.2}
+    #serviceStatus .txt{display:none}
+    #serviceStatus{max-width:none;flex:0 0 auto}
   }
   @media(max-width:380px){
     #topbar{gap:4px;padding:0 7px}
@@ -301,12 +328,13 @@
     .brand-name{font-size:13px}
     .seg button{padding:4px 5px;font-size:10px}
     .btn-ghost{padding:5px 6px;font-size:10px}
-    #serviceStatus{max-width:58px;font-size:8px}
   }
   @media(prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important}
   }
-  .leaflet-container{font:inherit}
+  .leaflet-container{font:inherit;-webkit-tap-highlight-color:transparent;touch-action:auto}
+  .leaflet-container.leaflet-touch-zoom{cursor:grab}
+  .leaflet-container.leaflet-touch-drag{cursor:grab}
   .poi-pin{display:flex;align-items:center;gap:6px;padding:3px 9px 3px 4px;border-radius:99px;color:#fff;
     font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.28);border:2px solid #fff}
   .poi-pin .ig{width:15px;height:15px;border-radius:50%;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-size:9px;flex:0 0 auto}
@@ -327,6 +355,54 @@
   .pop-btn{border:0;border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:700;color:#fff;background:var(--food)}
   .pop-btn.scene{background:var(--scene)}
   .pop-btn.video{background:#8ebfe9;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+
+  /* ===== 分享 ===== */
+  #shareBtn{
+    position:absolute;right:12px;top:12px;z-index:500;
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+    box-shadow:var(--shadow);color:var(--ink-2);
+  }
+  #shareBtn:active{transform:scale(.94)}
+  #shareBtn svg{width:18px;height:18px}
+  #installHint{
+    position:absolute;left:12px;right:12px;bottom:64px;z-index:600;
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:12px 14px;box-shadow:var(--shadow);display:none;align-items:center;gap:10px;
+  }
+  #installHint.show{display:flex}
+  #installHint .txt{flex:1;font-size:12.5px;color:var(--ink-2);line-height:1.5}
+  #installHint .txt b{color:var(--ink)}
+  #installHint button{
+    border:0;background:var(--food);color:#fff;font-size:12.5px;font-weight:700;
+    padding:8px 13px;border-radius:9px;flex:0 0 auto;
+  }
+  #installHint .x{border:0;background:none;color:var(--muted);font-size:16px;padding:4px;flex:0 0 auto}
+
+  /* ===== 分享面板 ===== */
+  .qr-box{
+    width:196px;height:196px;margin:2px auto 14px;padding:12px;background:#fff;
+    border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .qr-box svg{width:100%;height:100%;display:block}
+  .share-url{
+    display:flex;gap:9px;align-items:center;background:var(--paper);border:1px solid var(--line);
+    border-radius:10px;padding:11px 12px;margin-bottom:12px;
+  }
+  .share-url .txt{
+    flex:1;min-width:0;font-size:12.5px;color:var(--ink-2);word-break:break-all;
+    text-align:left;line-height:1.5;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  .share-act{display:flex;gap:10px}
+  .share-act .btn-main{flex:1}
+  .share-act .btn-plain{
+    flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink-2);
+    font-size:14px;font-weight:700;padding:11px 18px;border-radius:11px;transition:.15s;
+  }
+  .share-act .btn-plain:hover{border-color:var(--food);color:var(--food)}
+  .share-note{font-size:12px;color:var(--muted);margin-top:13px;line-height:1.65;text-align:center}
+  .share-note b{color:var(--ink-2)}
 </style>
 </head>
 <body>
@@ -344,7 +420,7 @@
       <button id="segScene" role="tab" aria-selected="false" onclick="setType('attraction')">景点 <span class="cnt" id="cntScene"></span></button>
     </div>
     <button class="btn-ghost" onclick="openUGC()"><span class="plus">+</span>补充地点</button>
-    <span id="serviceStatus" role="status" aria-live="polite">正在连接共享服务…</span>
+    <span id="serviceStatus" role="status" aria-live="polite"><span class="txt">正在连接…</span></span>
   </header>
 
   <main id="app">
@@ -360,6 +436,17 @@
       <div class="legend" aria-hidden="true">
         <div class="lg-item"><span class="lg-dot food"></span>美食</div>
         <div class="lg-item"><span class="lg-dot scene"></span>景点</div>
+      </div>
+      <button id="shareBtn" type="button" aria-label="分享这份指南">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+          <line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/>
+        </svg>
+      </button>
+      <div id="installHint">
+        <div class="txt"><b>把指南装到手机桌面</b><br>添加到主屏幕后可全屏打开，像 App 一样使用</div>
+        <button type="button" id="installBtn">添加</button>
+        <button type="button" class="x" onclick="dismissInstall()" aria-label="关闭">×</button>
       </div>
       <div class="map-fab" onclick="resetView()">回到全国</div>
       <div class="map-hint" id="mapHint">已定位 · 点击胶囊可看详情</div>
@@ -399,9 +486,21 @@
     </div>
   </div>
 
+  <!-- ===== 分享弹窗 ===== -->
+  <div class="overlay" id="shareOverlay" onclick="if(event.target===this)closeShare()">
+    <div class="sheet">
+      <div class="sheet-head">
+        <div class="tt">分享这份指南</div>
+        <button class="sheet-close" onclick="closeShare()" aria-label="关闭"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="sheet-body" id="shareBody"></div>
+    </div>
+  </div>
+
   <div id="toast" role="status"></div>
 
-<script src="https://fastly.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./vendor/leaflet.js"></script>
+<script src="./vendor/qrcode.js"></script>
 <script>
 "use strict";
 /* ===== 示例数据（演示用占位，PRD 口径：运营录入 + 用户点评聚合）===== */
@@ -450,6 +549,39 @@ const TAG_POOL = {
   attraction:["人少景美","很出片","值得去","适合亲子","交通方便","不虚此行"]
 };
 
+/* ===================== 坐标转换（WGS-84 → GCJ-02）=====================
+   底图使用腾讯位置服务，坐标系为 GCJ-02。内置示例点位按 WGS-84 书写，
+   统一转换后再落点，避免系统性偏移。地图选点得到的坐标本身已是 GCJ-02。 */
+const GCJ_A = 6378245.0;
+const GCJ_EE = 0.00669342162296594323;
+function outOfChina(lng, lat){ return !(lng > 72.004 && lng < 137.8347 && lat > 0.8293 && lat < 55.8271); }
+function transformLat(x, y){
+  let ret = -100.0 + 2.0*x + 3.0*y + 0.2*y*y + 0.1*x*y + 0.2*Math.sqrt(Math.abs(x));
+  ret += (20.0*Math.sin(6.0*x*Math.PI) + 20.0*Math.sin(2.0*x*Math.PI))*2.0/3.0;
+  ret += (20.0*Math.sin(y*Math.PI) + 40.0*Math.sin(y/3.0*Math.PI))*2.0/3.0;
+  ret += (160.0*Math.sin(y/12.0*Math.PI) + 320*Math.sin(y*Math.PI/30.0))*2.0/3.0;
+  return ret;
+}
+function transformLng(x, y){
+  let ret = 300.0 + x + 2.0*y + 0.1*x*x + 0.1*x*y + 0.1*Math.sqrt(Math.abs(x));
+  ret += (20.0*Math.sin(6.0*x*Math.PI) + 20.0*Math.sin(2.0*x*Math.PI))*2.0/3.0;
+  ret += (20.0*Math.sin(x*Math.PI) + 40.0*Math.sin(x/3.0*Math.PI))*2.0/3.0;
+  ret += (150.0*Math.sin(x/12.0*Math.PI) + 300.0*Math.sin(x/30.0*Math.PI))*2.0/3.0;
+  return ret;
+}
+function wgs84ToGcj02(lng, lat){
+  if(outOfChina(lng, lat)) return [lng, lat];
+  let dLat = transformLat(lng - 105.0, lat - 35.0);
+  let dLng = transformLng(lng - 105.0, lat - 35.0);
+  const radLat = lat / 180.0 * Math.PI;
+  let magic = Math.sin(radLat);
+  magic = 1 - GCJ_EE * magic * magic;
+  const sqrtMagic = Math.sqrt(magic);
+  dLat = (dLat * 180.0) / ((GCJ_A * (1 - GCJ_EE)) / (magic * sqrtMagic) * Math.PI);
+  dLng = (dLng * 180.0) / (GCJ_A / sqrtMagic * Math.cos(radLat) * Math.PI);
+  return [lng + dLng, lat + dLat];
+}
+
 /* ===================== 应用状态 ===================== */
 const DIMS = {food:["口味","环境","服务"], attraction:["景色","趣味","服务"]};
 const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -461,6 +593,14 @@ let POIS=[], curType="food", selectedPoiId=null, openCities=new Set();
 let map=null, markerByPoi={}, tempMarker=null, picking=false, reviewSeq=10000;
 let currentDetailPoi=null, detailFilter="latest";
 let state={overall:0,dims:[0,0,0],content:"",tags:[],anonymous:false};
+const nicknameStorageKey="canguan-user-nickname";
+let userNickname="";
+try{
+  userNickname=(localStorage.getItem(nicknameStorageKey)||"").trim();
+}catch(error){
+  console.warn("Saved nickname could not be read",error);
+}
+if(!userNickname) location.replace("./index.html");
 const visitorIdKey="canguan-visitor-id";
 const newVisitorId=()=>crypto.randomUUID?crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
   const r=Math.random()*16|0;
@@ -481,7 +621,68 @@ async function apiRequest(path,options={}){
   if(!response.ok) throw new Error(body.detail||"服务暂不可用，请稍后重试");
   return body;
 }
+
+/* ===================== 本地降级存储（无后端时）=====================
+   页面通过 CDN 分享时可能没有配套后端，此时把用户新增的地点、点评与
+   投票保存在本机浏览器，功能保持完整；检测到后端可用时自动切回共享模式。 */
+const localStoreKey="canguan-local-store-v1";
+const localStore={
+  read(){
+    try{
+      const raw=localStorage.getItem(localStoreKey);
+      if(!raw) return {places:[],reviews:{},votes:{}};
+      const data=JSON.parse(raw);
+      const reviews=data.reviews&&typeof data.reviews==="object"?data.reviews:{};
+      Object.values(reviews).forEach(list=>{
+        if(Array.isArray(list)) list.forEach(review=>{if(!Array.isArray(review.replies)) review.replies=[];});
+      });
+      return {places:Array.isArray(data.places)?data.places:[],reviews,votes:data.votes||{}};
+    }catch(error){ return {places:[],reviews:{},votes:{}}; }
+  },
+  write(data){
+    try{ localStorage.setItem(localStoreKey,JSON.stringify(data)); return true; }
+    catch(error){ console.warn("Local storage unavailable",error); return false; }
+  }
+};
+let serviceMode="local";           // "local" | "shared"
+let localData=localStore.read();
+let lastBackendProbeAt=0;          // 上次探测后端的时间，用于低频重试
+
+function localReviewsFor(poiId){
+  const list=localData.reviews[String(poiId)]||[];
+  return list.map(r=>({...r,ageDays:Math.max(0,Math.floor((Date.now()-new Date(r.createdAt).getTime())/86400000))}));
+}
+function localUsefulCount(reviewId){
+  const votes=localData.votes[String(reviewId)]||{};
+  return Object.keys(votes).filter(k=>votes[k]).length;
+}
+function localUsefulOn(reviewId){
+  return Boolean((localData.votes[String(reviewId)]||{})[visitorId]);
+}
+function mergeLocalIntoPois(){
+  POIS.forEach(p=>{
+    const local=localReviewsFor(p.id);
+    const shared=p.reviews||[];
+    const seen=new Set(shared.map(r=>String(r.id)));
+    const merged=shared.concat(local.filter(r=>!seen.has(String(r.id))));
+    merged.forEach(r=>{
+      r.useful=localUsefulCount(r.id);
+      r.usefulOn=localUsefulOn(r.id);
+    });
+    p.reviews=merged;
+    updateAgg(p);
+  });
+}
+function setServiceStatus(text,connected){
+  const status=document.getElementById("serviceStatus");
+  if(!status) return;
+  const label=status.querySelector(".txt");
+  if(label) label.textContent=text; else status.textContent=text;
+  status.classList.toggle("connected",Boolean(connected));
+}
+
 async function loadSharedData(){
+  lastBackendProbeAt=Date.now();
   try{
     const data=await apiRequest("/api/guide/places");
     const sharedPlaces=Array.isArray(data.places)?data.places:[];
@@ -491,19 +692,30 @@ async function loadSharedData(){
       if(allReviews[String(p.id)]) p.reviews=allReviews[String(p.id)];
       updateAgg(p);
     });
+    if(serviceMode!=="shared"){
+      serviceMode="shared";
+      mergeLocalIntoPois();
+    }
     updateCategoryCounts();
     renderList(); renderMarkers();
     if(currentDetailPoi&&document.getElementById("detailOverlay").classList.contains("show")){
       currentDetailPoi=POIS.find(p=>String(p.id)===String(currentDetailPoi.id))||currentDetailPoi;
       renderDetail();
     }
-    const status=document.getElementById("serviceStatus");
-    if(status){status.textContent="共享服务已连接";status.classList.add("connected");}
+    setServiceStatus("共享服务已连接",true);
     return true;
   }catch(error){
-    console.warn("Shared guide service unavailable",error);
-    const status=document.getElementById("serviceStatus");
-    if(status){status.textContent="共享服务未连接 · 请通过服务端地址访问";status.classList.remove("connected");}
+    console.warn("Shared guide service unavailable, falling back to local mode",error);
+    serviceMode="local";
+    POIS=POIS.filter(p=>!p.userAdded).concat(localData.places||[]);
+    mergeLocalIntoPois();
+    updateCategoryCounts();
+    renderList(); renderMarkers();
+    if(currentDetailPoi&&document.getElementById("detailOverlay").classList.contains("show")){
+      currentDetailPoi=POIS.find(p=>String(p.id)===String(currentDetailPoi.id))||currentDetailPoi;
+      renderDetail();
+    }
+    setServiceStatus("本机存储模式",false);
     return false;
   }
 }
@@ -512,7 +724,8 @@ async function loadSharedData(){
 function build(){
   POIS = RAW_POI.map(p=>{
     const reviews = [];
-    return {...p, reviews,
+    const [lng, lat] = wgs84ToGcj02(p.lng, p.lat);
+    return {...p, lng, lat, reviews,
       videoUrl: "https://www.bilibili.com/search?keyword=" + encodeURIComponent(p.name + " 探店 罐罐")};
   });
   POIS.forEach(updateAgg);
@@ -587,9 +800,10 @@ function selectPoiFromList(id){ selectPoi(id, true); }
 
 /* ===================== 地图 ===================== */
 function initMap(){
-  map = L.map("map",{center:[35.8,104.2], zoom:4, minZoom:3, maxZoom:17});
-  L.tileLayer("https://tile.openstreetmap.de/{z}/{x}/{y}.png",{
-    maxZoom:18, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  map = L.map("map",{center:[35.8,104.2], zoom:4, minZoom:3, maxZoom:18, zoomControl:true, tap:true});
+  L.tileLayer("https://rt{s}.map.gtimg.com/tile?styleid=1&x={x}&y={y}&z={z}",{
+    maxZoom:18, minZoom:3, subdomains:["0","1","2","3"],
+    attribution:'&copy; <a href="https://map.qq.com/">腾讯地图</a> · 边界与地名以官方发布为准'
   }).addTo(map);
   map.setMaxBounds([[12,72],[54,136]]);
   const updateLabelVisibility=()=>map.getContainer().classList.toggle("labels-hidden",map.getZoom()<=6);
@@ -721,9 +935,16 @@ function toggleOld(btn){
 }
 function rvHTML(p,r){
   const name = r.anonymous ? "匿名用户" : (r.author||"匿名用户");
+  const replies = Array.isArray(r.replies) ? r.replies : [];
   const dims = r.dims.some(d=>d>0) ? DIMS[p.type].map((lb,i)=>`${lb} ${r.dims[i]||"--"}`).join(" · ") : "";
   const stars = r.overall>0 ? `<span class="rv-stars">${starStr(r.overall)}</span>` : '<span class="rv-stars" style="color:var(--muted);letter-spacing:0">未评分</span>';
   const tags = (r.tags||[]).map(t=>`<span class="${p.type}">${esc(t)}</span>`).join("");
+  const repliesHTML = replies.length
+    ? `<div class="rv-replies">${replies.map(reply=>`<div class="rv-reply-item">
+        <div class="rv-reply-top"><span class="rv-reply-author">${esc(reply.author||"用户")}</span><span class="rv-reply-time">${ageText(reply.ageDays||0)}</span></div>
+        <div class="rv-reply-content">${esc(reply.content)}</div>
+      </div>`).join("")}</div>`
+    : "";
   return `<div class="rv">
     <div class="rv-top">
       <span class="rv-author">${esc(name)}</span>${r.anonymous?'<span class="rv-anon">（匿名）</span>':""}
@@ -735,12 +956,73 @@ function rvHTML(p,r){
     ${tags?`<div class="rv-tags">${tags}</div>`:""}
     <div class="rv-foot">
       <button class="rv-useful ${r.usefulOn?"on":""}" onclick='likeReview(${JSON.stringify(String(p.id))},${JSON.stringify(String(r.id))},this)'>有用 · ${r.useful}</button>
+      <button class="rv-reply" onclick='toggleReplyForm(${JSON.stringify(String(r.id))})'>回复 · ${replies.length}</button>
+    </div>
+    ${repliesHTML}
+    <div class="rv-reply-form" id="replyForm-${esc(r.id)}" hidden>
+      <textarea maxlength="500" placeholder="回复这条点评…"></textarea>
+      <div class="rv-reply-actions">
+        <button type="button" onclick='toggleReplyForm(${JSON.stringify(String(r.id))})'>取消</button>
+        <button type="button" class="submit" onclick='submitReviewReply(${JSON.stringify(String(p.id))},${JSON.stringify(String(r.id))},this)'>发送回复</button>
+      </div>
     </div>
   </div>`;
+}
+function toggleReplyForm(reviewId){
+  const form=document.getElementById("replyForm-"+reviewId);
+  if(!form) return;
+  form.hidden=!form.hidden;
+  if(!form.hidden) form.querySelector("textarea").focus();
+}
+async function submitReviewReply(poiId,reviewId,button){
+  const p=POIS.find(item=>String(item.id)===String(poiId));
+  const review=p&&p.reviews.find(item=>String(item.id)===String(reviewId));
+  const form=document.getElementById("replyForm-"+reviewId);
+  const textarea=form&&form.querySelector("textarea");
+  const content=textarea?textarea.value.trim():"";
+  if(!review||!textarea) return;
+  if(!content){toast("请输入回复内容");textarea.focus();return;}
+  if(content.length>500){toast("回复最多 500 个字符");return;}
+  button.disabled=true;
+  try{
+    if(serviceMode==="local"){
+      if(!Array.isArray(review.replies)) review.replies=[];
+      review.replies.push({
+        id:"local-reply-"+Date.now()+"-"+Math.floor(Math.random()*1e6),
+        author:userNickname,
+        content,
+        createdAt:new Date().toISOString(),
+        ageDays:0
+      });
+      if(String(review.id).startsWith("local-")) localStore.write(localData);
+    }else{
+      await apiRequest(`/api/guide/reviews/${encodeURIComponent(review.id)}/replies`,{
+        method:"POST",
+        body:JSON.stringify({author:userNickname,content})
+      });
+      await loadSharedData();
+    }
+    renderDetail();
+    toast("回复已发布");
+  }catch(error){
+    toast(error.message);
+    button.disabled=false;
+  }
 }
 async function likeReview(poiId,rvId,btn){
   const p=POIS.find(x=>String(x.id)===String(poiId)), r=p&&p.reviews.find(x=>String(x.id)===String(rvId));
   if(!r) return;
+  if(serviceMode==="local"){
+    const votes=localData.votes[String(r.id)]||{};
+    votes[visitorId]=!votes[visitorId];
+    localData.votes[String(r.id)]=votes;
+    localStore.write(localData);
+    r.useful=localUsefulCount(r.id);
+    r.usefulOn=localUsefulOn(r.id);
+    btn.classList.toggle("on",r.usefulOn);
+    btn.textContent="有用 · "+r.useful;
+    return;
+  }
   try{
     const result=await apiRequest(`/api/guide/reviews/${encodeURIComponent(r.id)}/vote`,{method:"POST"});
     r.useful=result.useful; r.usefulOn=result.usefulOn;
@@ -804,10 +1086,26 @@ async function submitReview(){
   const hasDim = state.dims.some(d=>d>0);
   const hasText = c.length>0;
   if(!hasOverall && !hasDim && !hasText){ toast("请至少填写星级、维度评分或文字点评"); return; }
+  if(serviceMode==="local"){
+    const reviewId="local-"+Date.now()+"-"+Math.floor(Math.random()*1e6);
+    const record={
+      id:reviewId, overall:state.overall, dims:state.dims.slice(), content:c,
+      tags:state.tags.slice(), anonymous:state.anonymous, author:userNickname,
+      createdAt:new Date().toISOString(), useful:0, usefulOn:false
+    };
+    const key=String(p.id);
+    localData.reviews[key]=localData.reviews[key]||[];
+    localData.reviews[key].unshift(record);
+    localStore.write(localData);
+    closeReview();
+    await loadSharedData();
+    toast("点评已保存在本机");
+    return;
+  }
   try{
     await apiRequest("/api/guide/reviews",{method:"POST",body:JSON.stringify({
       poi_id:String(p.id),overall:state.overall,dimensions:state.dims,content:c,
-      tags:state.tags,anonymous:state.anonymous
+      tags:state.tags,anonymous:state.anonymous,author:userNickname
     })});
     closeReview();
     await loadSharedData();
@@ -874,8 +1172,24 @@ async function submitUGC(){
       videoUrl=url.href;
     }catch{ toast("视频链接需使用有效的 http 或 https 地址"); return; }
   }
+  const payload={category:type,city,name,lng,lat,description:desc,video_url:videoUrl};
+  if(serviceMode==="local"){
+    const localId="local-poi-"+Date.now()+"-"+Math.floor(Math.random()*1e6);
+    const record={
+      id:localId,type,city,name,lng,lat,desc,videoUrl,userAdded:true
+    };
+    localData.places=localData.places||[];
+    localData.places.unshift(record);
+    localStore.write(localData);
+    await loadSharedData();
+    closeUGC();
+    setType(type);
+    selectPoi(localId,true);
+    toast("地点已保存在本机");
+    return;
+  }
   try{
-    const result=await apiRequest("/api/guide/places",{method:"POST",body:JSON.stringify({category:type,city,name,lng,lat,description:desc,video_url:videoUrl})});
+    const result=await apiRequest("/api/guide/places",{method:"POST",body:JSON.stringify(payload)});
     await loadSharedData();
     closeUGC();
     setType(type);
@@ -893,13 +1207,144 @@ function toast(msg){
   toastTimer=setTimeout(()=>t.classList.remove("show"), 2600);
 }
 
+/* ===================== 分享与安装 ===================== */
+let deferredInstallPrompt=null;
+function dismissInstall(){
+  const hint=document.getElementById("installHint");
+  if(hint) hint.classList.remove("show");
+  try{ localStorage.setItem("canguan-install-dismissed","1"); }catch(error){}
+}
+function maybeShowInstallHint(){
+  if(deferredInstallPrompt) return;
+  let dismissed=false;
+  try{ dismissed=localStorage.getItem("canguan-install-dismissed")==="1"; }catch(error){}
+  if(dismissed) return;
+  const isStandalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
+  if(isStandalone) return;
+  const hint=document.getElementById("installHint");
+  if(hint) hint.classList.add("show");
+}
+window.addEventListener("beforeinstallprompt",event=>{
+  event.preventDefault();
+  deferredInstallPrompt=event;
+  maybeShowInstallHint();
+});
+window.addEventListener("appinstalled",()=>{ dismissInstall(); deferredInstallPrompt=null; });
+
+/* ===================== 分享面板 =====================
+   手机与电脑共用同一个链接：电脑扫码即可在手机打开，手机可直接调起系统分享。 */
+function buildQR(text){
+  try{
+    const qr=qrcode(0,"M");
+    qr.addData(text);
+    qr.make();
+    const count=qr.getModuleCount();
+    const cell=6, quiet=4;
+    const size=(count+quiet*2)*cell;
+    let path="";
+    for(let row=0;row<count;row++){
+      for(let col=0;col<count;col++){
+        if(qr.isDark(row,col)) path+=`M${(col+quiet)*cell},${(row+quiet)*cell}h${cell}v${cell}h-${cell}z`;
+      }
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="指南链接二维码"><rect width="${size}" height="${size}" fill="#fff"/><path d="${path}" fill="#26211A"/></svg>`;
+  }catch(error){
+    console.warn("QR generation failed",error);
+    return "";
+  }
+}
+function shareSheetHTML(){
+  const url=location.href;
+  const isPhone=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const qr=buildQR(url);
+  const note=isPhone
+    ? "把链接发给朋友，或用<b>系统分享</b>直接发送到微信、QQ等应用。"
+    : "手机<b>扫一扫</b>下方二维码，即可在手机浏览器中打开这份指南。";
+  return `
+  <div style="text-align:center">
+    ${qr?`<div class="qr-box">${qr}</div>`:""}
+    <div class="share-url">
+      <span class="txt">${esc(url)}</span>
+      <button class="btn-plain" style="padding:7px 12px;font-size:12.5px" onclick="copyShareLink()">复制</button>
+    </div>
+    <div class="share-act">
+      <button class="btn-main" onclick="nativeShare()">系统分享</button>
+      <button class="btn-plain" onclick="copyShareLink()">复制链接</button>
+    </div>
+    <div class="share-note">${note}</div>
+  </div>`;
+}
+function openShare(){
+  document.getElementById("shareBody").innerHTML=shareSheetHTML();
+  document.getElementById("shareOverlay").classList.add("show");
+}
+function closeShare(){ document.getElementById("shareOverlay").classList.remove("show"); }
+async function copyShareLink(){
+  const url=location.href;
+  try{
+    if(navigator.clipboard && window.isSecureContext){ await navigator.clipboard.writeText(url); toast("链接已复制，可发给朋友"); return; }
+  }catch(error){}
+  try{
+    const box=document.createElement("textarea");
+    box.value=url; box.style.position="fixed"; box.style.opacity="0";
+    document.body.appendChild(box); box.select();
+    document.execCommand("copy");
+    document.body.removeChild(box);
+    toast("链接已复制，可发给朋友");
+  }catch(error){ toast("复制失败，请长按上方链接手动复制"); }
+}
+async function nativeShare(){
+  const payload={
+    title:"罐罐旅游指南 · 全国美食与景点地图",
+    text:"全国美食与景点地图，手机和电脑都能打开",
+    url:location.href
+  };
+  if(!navigator.share){ copyShareLink(); return; }
+  try{
+    await navigator.share(payload);
+  }catch(error){
+    if(error && error.name==="AbortError") return;
+    copyShareLink();
+  }
+}
+
 /* ===================== 启动 ===================== */
 build();
 updateCategoryCounts();
 initMap();
 renderList();
 loadSharedData();
-setInterval(loadSharedData,30000);
+/* 仅在共享服务可用时持续轮询。本机存储模式下后端必然不可达，继续请求只是
+   白白消耗手机流量与电量，因此改为每 2 分钟静默重试一次，兼顾"后端后来上线"。 */
+setInterval(()=>{
+  if(serviceMode==="shared") loadSharedData();
+  else if(Date.now()-lastBackendProbeAt>120000) loadSharedData();
+},30000);
+document.getElementById("shareBtn").addEventListener("click",openShare);
+document.getElementById("installBtn").addEventListener("click",async()=>{
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    try{ await deferredInstallPrompt.userChoice; }catch(error){}
+    deferredInstallPrompt=null;
+    dismissInstall();
+  }else{
+    const hint=document.getElementById("installHint");
+    if(hint) hint.querySelector(".txt").innerHTML="<b>手动添加到主屏幕</b><br>点击浏览器右上角菜单，选择「添加到主屏幕」";
+  }
+});
+if(document.getElementById("installHint")){
+  document.getElementById("installHint").addEventListener("click",event=>{
+    if(event.target.closest(".x")) dismissInstall();
+  });
+}
+setTimeout(maybeShowInstallHint,2500);
+
+/* 注册 Service Worker，支持添加到主屏幕与离线打开 */
+if("serviceWorker" in navigator && location.protocol!=="file:"){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("Service worker registration failed",error));
+  });
+}
 </script>
 </body>
 </html>

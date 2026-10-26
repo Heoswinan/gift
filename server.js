@@ -49,6 +49,7 @@ function rateLimit({ windowMs, max }) {
 
 const placeWriteLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 5 });
 const reviewWriteLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 10 });
+const replyWriteLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 20 });
 const voteWriteLimit = rateLimit({ windowMs: 60 * 1000, max: 60 });
 
 function isText(value, maxLength) {
@@ -97,8 +98,17 @@ async function initializeDatabase() {
       PRIMARY KEY (review_id, visitor_id)
     );
 
+    CREATE TABLE IF NOT EXISTS review_replies (
+      id TEXT PRIMARY KEY,
+      review_id TEXT NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+      author TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE INDEX IF NOT EXISTS reviews_poi_created_idx ON reviews (poi_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS review_votes_review_idx ON review_votes (review_id);
+    CREATE INDEX IF NOT EXISTS review_replies_review_created_idx ON review_replies (review_id, created_at);
   `);
 }
 
@@ -106,6 +116,13 @@ app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/罐罐旅游指南2.0.html", (req, res) =>
   res.sendFile(path.join(__dirname, "罐罐旅游指南2.0.html"))
 );
+app.use(express.static(__dirname, {
+  index: false,
+  setHeaders(res, filePath) {
+    if (filePath.endsWith("sw.js")) res.setHeader("Cache-Control", "no-cache");
+    if (filePath.endsWith(".webmanifest")) res.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
+  }
+}));
 
 app.get("/api/health", asyncRoute(async (req, res) => {
   await pool.query("SELECT 1");
@@ -113,15 +130,29 @@ app.get("/api/health", asyncRoute(async (req, res) => {
 }));
 
 app.get("/api/guide/places", asyncRoute(async (req, res) => {
-  const [placesResult, reviewsResult, voteCountsResult, visitorVotesResult] = await Promise.all([
+  const [placesResult, reviewsResult, voteCountsResult, visitorVotesResult, repliesResult] = await Promise.all([
     pool.query("SELECT id, category, city, name, lng, lat, description, video_url FROM places ORDER BY created_at DESC"),
     pool.query("SELECT id, poi_id, overall, dimensions, content, tags, anonymous, author, created_at FROM reviews ORDER BY created_at DESC"),
     pool.query("SELECT review_id, COUNT(*)::INTEGER AS useful FROM review_votes GROUP BY review_id"),
-    pool.query("SELECT review_id FROM review_votes WHERE visitor_id = $1", [visitorIdFrom(req) || ""])
+    pool.query("SELECT review_id FROM review_votes WHERE visitor_id = $1", [visitorIdFrom(req) || ""]),
+    pool.query("SELECT id, review_id, author, content, created_at FROM review_replies ORDER BY created_at")
   ]);
 
   const voteCounts = new Map(voteCountsResult.rows.map(row => [row.review_id, row.useful]));
   const visitorVotes = new Set(visitorVotesResult.rows.map(row => row.review_id));
+  const replyGroups = new Map();
+  for (const row of repliesResult.rows) {
+    const createdAt = new Date(row.created_at);
+    const replies = replyGroups.get(row.review_id) || [];
+    replies.push({
+      id: row.id,
+      author: row.author,
+      content: row.content,
+      createdAt: createdAt.toISOString(),
+      ageDays: Math.max(0, Math.floor((Date.now() - createdAt.getTime()) / 86400000))
+    });
+    replyGroups.set(row.review_id, replies);
+  }
   const reviews = {};
   for (const row of reviewsResult.rows) {
     const createdAt = new Date(row.created_at);
@@ -137,7 +168,8 @@ app.get("/api/guide/places", asyncRoute(async (req, res) => {
       createdAt: createdAt.toISOString(),
       ageDays,
       useful: voteCounts.get(row.id) || 0,
-      usefulOn: visitorVotes.has(row.id)
+      usefulOn: visitorVotes.has(row.id),
+      replies: replyGroups.get(row.id) || []
     };
     (reviews[row.poi_id] ||= []).push(item);
   }
@@ -199,7 +231,7 @@ app.post("/api/guide/places", placeWriteLimit, asyncRoute(async (req, res) => {
 }));
 
 app.post("/api/guide/reviews", reviewWriteLimit, asyncRoute(async (req, res) => {
-  const { poi_id: poiId, overall, dimensions, content, tags, anonymous } = req.body;
+  const { poi_id: poiId, overall, dimensions, content, tags, anonymous, author } = req.body;
   if (!isText(poiId, 100)) {
     return res.status(400).json({ detail: "点评地点无效" });
   }
@@ -219,6 +251,9 @@ app.post("/api/guide/reviews", reviewWriteLimit, asyncRoute(async (req, res) => 
   if (typeof anonymous !== "boolean") {
     return res.status(400).json({ detail: "匿名选项无效" });
   }
+  if (!isText(author, 24)) {
+    return res.status(400).json({ detail: "请输入昵称（最多 24 个字符）" });
+  }
   if (overall === 0 && dimensions.every(value => value === 0) && !content.trim()) {
     return res.status(400).json({ detail: "请至少填写星级、维度评分或文字点评" });
   }
@@ -227,9 +262,38 @@ app.post("/api/guide/reviews", reviewWriteLimit, asyncRoute(async (req, res) => 
   await pool.query(
     `INSERT INTO reviews (id, poi_id, overall, dimensions, content, tags, anonymous, author)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [id, poiId.trim(), overall, JSON.stringify(dimensions), content.trim(), JSON.stringify(tags), anonymous, "访客"]
+    [id, poiId.trim(), overall, JSON.stringify(dimensions), content.trim(), JSON.stringify(tags), anonymous, author.trim()]
   );
   res.status(201).json({ id });
+}));
+
+app.post("/api/guide/reviews/:id/replies", replyWriteLimit, asyncRoute(async (req, res) => {
+  const { author, content } = req.body;
+  if (!isText(author, 24)) {
+    return res.status(400).json({ detail: "请输入昵称（最多 24 个字符）" });
+  }
+  if (!isText(content, 500)) {
+    return res.status(400).json({ detail: "回复内容不能为空，且最多 500 个字符" });
+  }
+  const review = await pool.query("SELECT id FROM reviews WHERE id = $1", [req.params.id]);
+  if (!review.rowCount) {
+    return res.status(404).json({ detail: "找不到这条点评" });
+  }
+
+  const id = crypto.randomUUID();
+  const createdAt = new Date();
+  await pool.query(
+    "INSERT INTO review_replies (id, review_id, author, content) VALUES ($1, $2, $3, $4)",
+    [id, req.params.id, author.trim(), content.trim()]
+  );
+  res.status(201).json({
+    id,
+    review_id: req.params.id,
+    author: author.trim(),
+    content: content.trim(),
+    createdAt: createdAt.toISOString(),
+    ageDays: 0
+  });
 }));
 
 app.post("/api/guide/reviews/:id/vote", voteWriteLimit, asyncRoute(async (req, res) => {
